@@ -1,0 +1,97 @@
+﻿@page "/LiveDataDemo"
+@using System.Collections.ObjectModel
+@using MudBlazor
+@using TestSSR.Client.Models
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+
+
+<MudThemeProvider />
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+
+<MudDataGrid Items=@Cryptos>
+    <Columns>
+        <HierarchyColumn T="CryptoCurrency" />
+        <PropertyColumn Property="x => x.Id" Title="Id" />
+        <PropertyColumn Property="x => x.Rank" Title="Rank" />
+        <PropertyColumn Property="x => x.Symbol" Title="Symbol" />
+        <PropertyColumn Property="x => x.Name" Title="Name" />
+        <PropertyColumn Property="x => x.Supply" Title="Supply" />
+        <PropertyColumn Property="x => x.MaxSupply" Title="Max Supply" />
+        <PropertyColumn Property="x => x.MarketCapUsd" Title="Market Cap (USD)" />
+        <PropertyColumn Property="x => x.VolumeUsd24Hr" Title="24h Volume (USD)" />
+        <PropertyColumn Property="x => x.PriceUsd" Title="Price (USD)" />
+        <PropertyColumn Property="x => x.ChangePercent24Hr" Title="24h Change (%)" />
+        <PropertyColumn Property="x => x.Vwap24Hr" Title="VWAP 24h" />
+        <PropertyColumn Property="x => x.Explorer" Title="Explorer URL" />
+    </Columns>
+    <ChildRowContent>
+        <MudCard>
+            <MudCardHeader>
+                <CardHeaderContent>
+                    <MudText Typo="Typo.h6">@context.Item.Name (@context.Item.Symbol)</MudText>
+                </CardHeaderContent>
+            </MudCardHeader>
+            <MudCardContent>
+                <MudText>Rank: @context.Item.Rank</MudText>
+                <MudText>Price (USD): @context.Item.PriceUsd</MudText>
+                <MudText>Market Cap (USD): @context.Item.MarketCapUsd</MudText>
+                <MudText>Supply: @context.Item.Supply</MudText>
+                <MudText>24h Volume (USD): @context.Item.VolumeUsd24Hr</MudText>
+                <MudText>24h Change (%): @context.Item.ChangePercent24Hr</MudText>
+                <MudText>
+                    Explorer:
+                    <MudLink Href="@context.Item.Explorer" Target="_blank">@context.Item.Explorer</MudLink>
+                </MudText>
+            </MudCardContent>
+        </MudCard>
+    </ChildRowContent>
+
+    <PagerContent>
+        <MudDataGridPager T="CryptoCurrency" />
+    </PagerContent>
+</MudDataGrid>
+
+
+@code {
+    [Inject] HttpClient HttpClient { get; set; } = default!;
+
+    private CryptoData CryptoData { get; set; } = new();
+
+    private ObservableCollection<CryptoCurrency> Cryptos = new();
+
+    private PeriodicTimer PeriodicTimer = new(TimeSpan.FromSeconds(5));
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await FetchData();
+            _ = RunTimer();
+        }
+    }
+
+    private async Task RunTimer()
+    {
+        while (await PeriodicTimer.WaitForNextTickAsync())
+        {
+            try
+            {
+                await FetchData();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex);
+            }
+        }
+    }
+
+    private async Task FetchData()
+    {
+        CryptoData = await HttpClient.GetFromJsonAsync<CryptoData>("https://api.coincap.io/v2/assets") ?? CryptoData;
+        Cryptos = new(CryptoData.Data);
+        await InvokeAsync(StateHasChanged);
+    }
+}

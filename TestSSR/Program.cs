@@ -1,3 +1,4 @@
+using MudBlazor.Services;
 using TestSSR.Client.Pages;
 using TestSSR.Components;
 
@@ -7,6 +8,9 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents()
     .AddInteractiveWebAssemblyComponents();
+
+builder.Services.AddMudServices();
+builder.Services.AddHttpClient();
 
 var app = builder.Build();
 
